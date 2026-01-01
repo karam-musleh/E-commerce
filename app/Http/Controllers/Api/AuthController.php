@@ -11,7 +11,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\UserResource;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use App\Http\Traits\ApiResponserTrait;
+use App\Traits\ApiResponserTrait;
 use Tymon\JWTAuth\Exceptions\JWTException;
 
 class AuthController extends Controller
@@ -28,7 +28,7 @@ class AuthController extends Controller
         if (!Hash::check($request->password, $user->password)) {
             return $this->errorResponse('Invalid password', 400);
         }
-        if (!empty($user->otp_code)) {
+        if ($user->otp_code !== "Verified") {
             return $this->errorResponse('OTP verification required', 403);
         }
         $token = Auth::guard('api')->login($user);

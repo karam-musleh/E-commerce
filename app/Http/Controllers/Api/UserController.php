@@ -13,7 +13,7 @@ use App\Http\Requests\UpdateRequest;
 use App\Http\Resources\UserResource;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use App\Http\Traits\ApiResponserTrait;
+use App\Traits\ApiResponserTrait;
 
 
 class UserController extends Controller

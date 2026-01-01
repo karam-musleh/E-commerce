@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\RegisterRequest;
 use App\Http\Resources\UserResource;
-use App\Http\Traits\ApiResponserTrait;
+use App\Traits\ApiResponserTrait;
 use App\Models\User;
 use App\Notifications\OtpUser;
 use Illuminate\Http\Request;
@@ -51,7 +51,7 @@ class RegisterController extends Controller
         }
 
         $user->update([
-            'otp_code' => null,
+            'otp_code' => "Verified",
             'otp_expires_at' => null,
         ]);
 
