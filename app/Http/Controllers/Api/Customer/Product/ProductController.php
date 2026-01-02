@@ -54,26 +54,107 @@ class ProductController extends Controller
     }
 
     //
-    public function show(Product $product)
+    // public function show(Product $product)
+    // {
+    // $product = Product::Active()
+    //     ->where('slug', $product->slug)
+    //     ->with([
+    //         'category:id,name,slug',
+    //         'brand:id,name,slug',
+    //         'attributeValues.attribute:id,name,slug',
+    //         'mainImage',
+    //         'galleryImages',
+    //         'approvedReviews.user:id,name',
+    //     ])->first();
+    //         dd($product);
+    // $additionalPrice = 0;
+    // $selectedValueIds = [];
+
+    // foreach (request()->query() as $attributeNameOrSlug => $valueNameOrSlug) {
+    //     $match = $product->attributeValues->first(function ($attrValue) use ($attributeNameOrSlug, $valueNameOrSlug) {
+    //         $attributeMatches = strtolower($attrValue->attribute->name) === strtolower($attributeNameOrSlug) ||
+    //             strtolower($attrValue->attribute->slug) === strtolower($attributeNameOrSlug);
+    //         $valueMatches = strtolower($attrValue->slug) === strtolower($valueNameOrSlug) ||
+    //             strtolower($attrValue->value) === strtolower($valueNameOrSlug);
+    //         return $attributeMatches && $valueMatches;
+    //     });
+
+    //     if ($match) {
+    //         $selectedValueIds[] = $match->id;
+    //         $additionalPrice += $match->pivot->additional_price ?? 0;
+    //     }
+    // }
+    // dd($product);
+
+    // return $this->successResponse(
+    //     new ProductResource($product, $selectedValueIds, $additionalPrice),
+    //     'Product retrieved successfully',
+    //     200
+    // );
+
+    // ✅ تحقق من حالة المنتج
+    //
+    public function show($slug)
     {
-        $product->load([
-            'category:id,name,slug',
-            'brand:id,name,slug',
-            'attributeValues.attribute:id,name,slug',
-            'mainImage',
-            'galleryImages',
-            'approvedReviews.user:id,name',
-        ])->active();
+        // // ✅ تأكد أن الـ product موجود
+        // if (!$product) {
+        //     return $this->errorResponse('Product not found', 404);
+        // }
 
+        // // تحقق من الحالة
+        // if ($product->status !== Product::STATUS_ACTIVE) {
+        //     return $this->errorResponse('Product not available', 404);
+        // }
 
+        // // تحميل العلاقات
+        // $product->load([
+        //     'category',
+        //     'brand',
+        //     'attributeValues.attribute',
+        //     'mainImage',
+        //     'galleryImages',
+        //     'approvedReviews.user',
+        // ]);
+        $product = Product::Active()
+            ->where('slug', $slug)
+            ->with([
+                'category:id,name,slug',
+                'brand:id,name,slug',
+                'attributeValues.attribute:id,name,slug',
+                'mainImage',
+                'galleryImages',
+                'approvedReviews.user:id,name',
+            ])->first();
+        // dd([
+        //     'from_db' => $product->getAttributes(),  // البيانات من الـ DB مباشرة
+        //     'total_quantity_raw' => $product->getRawOriginal('total_quantity'),
+        //     'total_quantity_accessor' => $product->total_quantity,
+        // ]);
+        if (!$product) {
+            return $this->errorResponse('Product not found', 404);
+        }
+        // dd($product->total_quantity);
+
+        //   dd([
+        //         'product_exists' => !is_null($product),
+        //         'product_id' => $product?->id,
+        //         'product_name' => $product?->name,
+        //         'product_slug' => $product?->slug,
+        //     ]);
+        // حساب السعر الإضافي
         $additionalPrice = 0;
+        $selectedValueIds = [];
 
         foreach (request()->query() as $attributeNameOrSlug => $valueNameOrSlug) {
             $match = $product->attributeValues->first(function ($attrValue) use ($attributeNameOrSlug, $valueNameOrSlug) {
-                $attributeMatches = strtolower($attrValue->attribute->name) === strtolower($attributeNameOrSlug) ||
+                $attributeMatches =
+                    strtolower($attrValue->attribute->name) === strtolower($attributeNameOrSlug) ||
                     strtolower($attrValue->attribute->slug) === strtolower($attributeNameOrSlug);
-                $valueMatches = strtolower($attrValue->slug) === strtolower($valueNameOrSlug) ||
+
+                $valueMatches =
+                    strtolower($attrValue->slug) === strtolower($valueNameOrSlug) ||
                     strtolower($attrValue->value) === strtolower($valueNameOrSlug);
+
                 return $attributeMatches && $valueMatches;
             });
 
@@ -83,10 +164,10 @@ class ProductController extends Controller
             }
         }
 
+        // ✅ تأكد من تمرير البيانات صح
         return $this->successResponse(
             new ProductResource($product, $selectedValueIds, $additionalPrice),
-            'Product retrieved successfully',
-            200
+            'Product retrieved successfully'
         );
     }
 }

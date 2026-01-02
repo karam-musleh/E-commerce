@@ -120,8 +120,6 @@ class ProductController extends Controller
             $product = Product::create($data);
             // dd($product);
             if ($request->has('attribute_values')) {
-
-
                 foreach ($request->attribute_values as $attr) {
                     $product->attributeValues()->attach($attr['id'], [
                         'additional_price' => $attr['additional_price'] ?? 0,
@@ -129,6 +127,12 @@ class ProductController extends Controller
                         'min_qty' => $attr['min_qty'] ?? 1,
                     ]);
                 }
+                $totalQuantity = collect($request->attribute_values)
+                    ->sum(fn($attr) => (int) $attr['quantity']);
+
+                $product->update([
+                    'total_quantity' => $totalQuantity,
+                ]);
             }
             if ($request->hasFile('main_image')) {
 
@@ -140,10 +144,14 @@ class ProductController extends Controller
             if ($request->hasFile('gallery_images')) {
                 ImageHelper::uploadGallery($product, $request->file('gallery_images'), 'products/gallery');
             }
-            $product->update([
-                'total_quantity' => $product->attributeValues()->sum('product_attribute_values.quantity'),
-            ]);
+
+            //         // dd($product->total_quantity);
+            // $product->total_quantity +=$product->attributeValues()->sum('product_attribute_values.quantity');
+            // $product->update([
+            //     'total_quantity' => $product->total_quantity,
+            // ]);
             DB::commit();
+            // dd($product->total_quantity);
 
 
 

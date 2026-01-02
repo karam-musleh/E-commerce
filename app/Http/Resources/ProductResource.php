@@ -3,30 +3,28 @@
 namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class ProductResource extends JsonResource
 {
-    /**
-     * Transform the resource into an array.
-     *
-     * @return array<string, mixed>
-     */
-
     protected $selectedValueIds = [];
     protected $additionalPrice = 0;
+
     public function __construct($resource, $selectedValueIds = [], $additionalPrice = 0)
     {
         parent::__construct($resource);
-
         $this->selectedValueIds = $selectedValueIds;
         $this->additionalPrice = $additionalPrice;
     }
 
-    protected function formattedAttributes($product)
+    protected function formattedAttributes()
     {
-        return $product->attributeValues
+        // ✅ تأكد من وجود attributeValues
+        if (!$this->resource || !$this->resource->attributeValues) {
+            return [];
+        }
+
+        return $this->resource->attributeValues
             ->groupBy(fn($val) => $val->attribute->name)
             ->map(function ($values, $attributeName) {
                 return [
@@ -36,9 +34,9 @@ class ProductResource extends JsonResource
                             "id" => $val->id,
                             "value" => $val->value,
                             "slug" => $val->slug,
-                            "additional_price" => $val->pivot->additional_price,
-                            "quantity" => $val->pivot->quantity,
-                            "min_qty" => $val->pivot->min_qty,
+                            "additional_price" => $val->pivot->additional_price ?? 0,
+                            "quantity" => $val->pivot->quantity ?? 0,
+                            "min_qty" => $val->pivot->min_qty ?? 1,
                             "selected" => in_array($val->id, (array)$this->selectedValueIds)
                         ];
                     })->values()
@@ -47,77 +45,20 @@ class ProductResource extends JsonResource
             ->values();
     }
 
-
-    // public function toArray(Request $request): array
-    // {
-
-
-    //     return [
-    //         "id"            => $this->id,
-    //         "name"          => $this->name,
-    //         "slug"          => $this->slug,
-    //         "description"   => $this->description,
-    //         "images" => [
-    //             "main" => $this->main_image_url,
-    //             "gallery" => $this->when(
-    //                 $this->relationLoaded('galleryImages'),
-    //                 fn() => $this->gallery_images_urls
-    //             ),
-    //         ],
-
-
-    //         "category" => $this->when($this->category, fn() => [
-    //             "id" => $this->category->id,
-    //             "name" => $this->category->name,
-    //             "slug" => $this->category->slug,
-    //         ]),
-
-    //         "brand" => $this->when($this->brand, fn() => [
-    //             "id"   => $this->brand->id,
-    //             "name" => $this->brand->name,
-    //             "slug" => $this->brand->slug,
-    //         ]),
-
-    //         'attributes' => $this->formattedAttributes($this),
-    //         // 'attribute_values' => $this->when(
-    //         //     $this->relationLoaded('attributeValues') && $this->attributeValues->isNotEmpty(),
-    //         //     fn() => $this->attributeValues->map(function ($value) {
-    //         //         return [
-    //         //             'id' => $value->id,
-    //         //             'value' => $value->value,
-    //         //             'slug' => $value->slug,
-    //         //             'additional_price' => $value->pivot->additional_price,
-    //         //         ];
-    //         //     })
-    //         // ),
-    //         "pricing" => [
-    //             "price"         => $this->main_price,
-    //             "discount"      => $this->discount,
-    //             "discount_type" => $this->discount_type,
-    //             "final_price"   => $this->final_price,
-    //         ],
-
-    //         "quantity"      => $this->total_quantity,
-    //         "status"        => $this->status,
-    //         "unit"          => $this->unit,
-    //         "weight"        => $this->weight,
-
-    //         "created_at"    => $this->created_at,
-    //         "updated_at"    => $this->updated_at,
-
-    //         // "created_at" => $this->created_at->format('Y-m-d H:i:s'),
-    //         // "updated_at" => $this->updated_at->format('Y-m-d H:i:s'),
-    //     ];
-    // }
     public function toArray(Request $request): array
     {
-        return [
-            "id"            => $this->id,
-            "name"          => $this->name,
-            "slug"          => $this->slug,
-            "description"   => $this->description,
+        // ✅ تأكد من وجود الـ resource
+        if (!$this->resource) {
+            return [];
+        }
 
-            "images" =>  [
+        return [
+            "id" => $this->id,
+            "name" => $this->name,
+            "slug" => $this->slug,
+            "description" => $this->description,
+
+            "images" => [
                 "main" => $this->main_image_url,
                 "gallery" => $this->when(
                     $this->relationLoaded('galleryImages'),
@@ -125,48 +66,54 @@ class ProductResource extends JsonResource
                 ),
             ],
 
-            "category" => $this->when($this->category, fn() => [
-                "id" => $this->category->id,
-                "name" => $this->category->name,
-                "slug" => $this->category->slug,
-            ]),
+            'category' => $this->when(
+                $this->relationLoaded('category') && $this->category,
+                fn() => [
+                    'id' => $this->category->id,
+                    'name' => $this->category->name,
+                    'slug' => $this->category->slug,
+                ]
+            ),
 
-            "brand" => $this->when($this->brand, fn() => [
-                "id"   => $this->brand->id,
-                "name" => $this->brand->name,
-                "slug" => $this->brand->slug,
-            ]),
+            "brand" => $this->when(
+                $this->relationLoaded('brand') && $this->brand,
+                fn() => [
+                    "id" => $this->brand->id,
+                    "name" => $this->brand->name,
+                    "slug" => $this->brand->slug,
+                ]
+            ),
 
             'attributes' => $this->when(
                 $this->relationLoaded('attributeValues') && $this->attributeValues->isNotEmpty(),
-                fn() => $this->formattedAttributes($this)
+                fn() => $this->formattedAttributes()
             ),
-
 
             "pricing" => [
-                "price"         => $this->main_price,
-                "discount"      => $this->discount,
-                "discount_type" => $this->discount_type,
-                "final_price"   => $this->final_price + $this->additionalPrice,
+                "price" => $this->main_price ?? 0,
+                "discount" => $this->discount,
+                "discount_type" => $this->discount_type ?? 'percent',
+                "final_price" => ($this->final_price ?? 0) + $this->additionalPrice,
             ],
 
-            "quantity"      => $this->total_quantity,
-            "status"        => $this->status,
-            "unit"          => $this->unit,
-            "weight"        => $this->weight,
+            "quantity" => $this->total_quantity ?? 0,
+            // "min_qty" => $this->min_qty,
+            "status" => $this->status,
+            "unit" => $this->unit,
+            "weight" => $this->weight,
 
-            "deal" => $this->whenLoaded(
-                'dailyDeal',
-                fn() =>
-                new DailyDealResource($this->dailyDeal)
+            "deal" => $this->when(
+                $this->relationLoaded('dailyDeal') && $this->dailyDeal,
+                fn() => new DailyDealResource($this->dailyDeal)
             ),
+
             "rating" => [
-                "average" => round($this->average_rating, 1),
-                "count"   => $this->reviews_count,
+                "average" => round($this->average_rating ?? 0, 1),
+                "count" => $this->reviews_count ?? 0,
             ],
 
-            "created_at"    => $this->created_at,
-            "updated_at"    => $this->updated_at,
+            "created_at" => $this->created_at?->format('Y-m-d H:i:s'),
+            "updated_at" => $this->updated_at?->format('Y-m-d H:i:s'),
         ];
     }
 }
