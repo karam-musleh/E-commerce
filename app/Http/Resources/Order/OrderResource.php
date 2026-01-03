@@ -47,7 +47,7 @@ class OrderResource extends JsonResource
             ),
 
             // معلومات إضافية
-            'is_cancellable' => $this->isCancellable(),
+            // 'is_cancellable' => $this->isCancellable(),
             'is_paid' => $this->isPaid(),
             'is_delivered' => $this->isDelivered(),
 

@@ -47,6 +47,12 @@ class OrderItem extends Model
             ]);
         }
     }
+    // داخل OrderItem.php
+public function getAttributesAttribute()
+{
+    return $this->itemAttributes;
+}
+
 
     // Renamed relation to avoid collision with Eloquent's $attributes property
 

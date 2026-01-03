@@ -48,7 +48,7 @@ protected OrderService $orderService;
             ->where('user_id', auth('api')->id())
             ->with([
                 'items.product',
-                'items.attributes',
+                'items.itemAttributes',
                 'address'
             ])
             ->firstOrFail();

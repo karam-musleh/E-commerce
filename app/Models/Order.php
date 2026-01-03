@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
+use Illuminate\Support\Str;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 
 class Order extends Model
 {
-    use HasUlids;
+    // use HasUlids;
 
     const STATUS_PENDING = 'pending';           // في الانتظار
     const STATUS_CONFIRMED = 'confirmed';       // تم التأكيد
@@ -43,7 +44,26 @@ class Order extends Model
         'delivery_status',
         'payment_status',
     ];
+    protected $casts = [
+        'sub_total' => 'integer',
+        'tax_amount' => 'integer',
+        'total_amount' => 'integer',
+        'paid_at' => 'datetime',
+        'cancelled_at' => 'datetime',
+    ];
+    protected static function boot()
+    {
+        parent::boot();
 
+        // ✅ توليد order_number تلقائياً عند الإنشاء
+        static::creating(function ($order) {
+            if (empty($order->order_number)) {
+                $order->order_number = (string) Str::ulid();
+            }
+        });
+    }
+    // public $incrementing = true;
+    // protected $keyType = 'int';
     public function user()
     {
         return $this->belongsTo(User::class);
