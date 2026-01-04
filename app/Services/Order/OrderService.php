@@ -429,7 +429,7 @@ class OrderService
 
         try {
             $cart = $this->getCart();
-
+            // dd($cart);
             $this->validateCart($cart);
 
             $address = $this->getOrCreateAddress($data);
@@ -458,18 +458,25 @@ class OrderService
         }
     }
 
-    protected function getCart(): Cart
-    {
-        $cart = auth('api')->user()->cart()
-            ->with(['items.product', 'items.attributeValues.attribute'])
-            ->first();
+  protected function getCart(): Cart
+{
 
-        if (!$cart || $cart->items->isEmpty()) {
-            abort(400, 'The cart is empty.');
-        }
+    $cart = auth('api')->user()->cart()
+        ->with(['items.product', 'items.attributeValues.attribute'])
+        ->first();
 
-        return $cart;
+    if (!$cart) {
+        abort(400, 'Cart not found for this user.');
     }
+
+    // تحقق من وجود عناصر الكارت
+    if ($cart->items->isEmpty()) {
+        abort(400, 'The cart is empty.');
+    }
+
+    return $cart;
+}
+
 
     protected function validateCart(Cart $cart): void
     {
@@ -513,23 +520,37 @@ class OrderService
         ]);
     }
 
+
     protected function calculatePricing(Cart $cart, array $data): array
     {
-        $subTotal = 0;
+        // ✅ 1. تحميل كل العلاقات مرة واحدة
+        $cart->loadMissing([
+            'items.product:id,main_price,discount,discount_type',
+            'items.attributeValues:id'
+        ]);
 
-        foreach ($cart->items as $item) {
-            $product = $item->product;
-            $unitPrice = intval($product->final_price * 100);
-            $additionalPrice = $item->attributeValues->sum(fn($attr) => $attr->pivot->additional_price);
-            $totalPrice = ($unitPrice + $additionalPrice) * $item->quantity;
-            $subTotal += $totalPrice;
-        }
+        // ✅ 2. حساب المجموع الفرعي
+        $subTotal = $cart->items->sum(function ($item) {
+            // السعر الأساسي (محوّل لـ cents)
+            $unitPrice = intval($item->product->final_price * 100);
 
-        $taxRate = 0.16;
+            // السعر الإضافي (مع التحقق من الوجود)
+            $additionalPrice = 0;
+            if ($item->relationLoaded('attributeValues') && $item->attributeValues) {
+                $additionalPrice = $item->attributeValues->sum(
+                    fn($attr) => $attr->pivot->additional_price ?? 0
+                );
+            }
+
+            // السعر الإجمالي للـ item
+            return ($unitPrice + $additionalPrice) * $item->quantity;
+        });
+
+        // ✅ 3. حساب الضريبة والشحن
+        // 0.16 يمثل 16% كمثال ثابت
+        $taxRate = 0.10;
         $taxAmount = intval($subTotal * $taxRate);
-
         $shippingCost = 0;
-
         $totalAmount = $subTotal + $taxAmount + $shippingCost;
 
         return [
@@ -539,7 +560,6 @@ class OrderService
             'total_amount' => $totalAmount,
         ];
     }
-
     protected function createOrder(Address $address, array $pricing, array $data): Order
     {
         return Order::create([
@@ -560,7 +580,7 @@ class OrderService
         foreach ($cart->items as $cartItem) {
             $product = $cartItem->product;
 
-            $unitPrice = intval($product->final_price * 100);
+            $unitPrice = $product->final_price * 100 ;
             $additionalPrice = $cartItem->attributeValues->sum(fn($attr) => $attr->pivot->additional_price);
             $totalPrice = ($unitPrice + $additionalPrice) * $cartItem->quantity;
 
@@ -586,6 +606,55 @@ class OrderService
             }
         }
     }
+//     protected function copyCartItemsToOrder(Cart $cart, Order $order): void
+// {
+//     foreach ($cart->items as $cartItem) {
+//         $product = $cartItem->product;
+
+//         // السعر الأساسي
+//         $unitPrice = intval($product->final_price * 100);
+//         $additionalPrice = $cartItem->attributeValues->sum(fn($attr) => $attr->pivot->additional_price);
+//         $finalUnitPrice = $unitPrice + $additionalPrice;
+
+//         // ✅ حساب الخصم
+//         $discount = $product->discount ?? 0;
+//         $discountType = $product->discount_type ?? Product::DISCOUNT_TYPE_PERCENT;
+
+//         $priceAfterDiscount = $finalUnitPrice;
+//         if ($discount > 0) {
+//             if ($discountType === 'percent') {
+//                 $priceAfterDiscount = $finalUnitPrice * (1 - $discount / 100);
+//             } else { // fixed
+//                 $priceAfterDiscount = $finalUnitPrice - ($discount * 100);
+//             }
+//         }
+
+//         // ✅ السعر الإجمالي بعد الخصم
+//         $totalPrice = intval($priceAfterDiscount * $cartItem->quantity);
+
+//         $orderItem = $order->items()->create([
+//             'product_id' => $product->id,
+//             'quantity' => $cartItem->quantity,
+//             'discount' => $discount,
+//             'discount_type' => $discountType,
+//             'unit_price' => $finalUnitPrice, // قبل الخصم
+//             'total_price' => $totalPrice, // ✅ بعد الخصم
+//         ]);
+
+//         // الـ attributes زي ما هي
+//         foreach ($cartItem->attributeValues as $attr) {
+//             $pivot = $product->attributeValues->where('id', $attr->id)->first();
+
+//             OrderItemAttribute::create([
+//                 'order_item_id' => $orderItem->id,
+//                 'attribute_value_id' => $attr->id,
+//                 'attribute_name' => $attr->attribute->name,
+//                 'attribute_value' => $attr->value,
+//                 'additional_price' => $pivot?->pivot?->additional_price ?? 0,
+//             ]);
+//         }
+//     }
+// }
 
     protected function updateStock(Order $order): void
     {

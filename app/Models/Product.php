@@ -115,7 +115,7 @@ class Product extends Model
     {
         return Attribute::make(
             get: fn($value) => $value / 100,
-            set: fn($value) => intval($value * 100)
+            set: fn($value) => $value * 100
         );
     }
 

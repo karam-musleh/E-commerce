@@ -62,7 +62,7 @@ class AddCartService
     protected function addToDatabaseCart(array $data, array $incomingAttrIds)
     {
         $cart = Cart::firstOrCreate([
-            'user_id' => auth('api')->id(),
+            // 'user_id' => auth('api')->id(),
             'status' => 'active'
         ]);
 

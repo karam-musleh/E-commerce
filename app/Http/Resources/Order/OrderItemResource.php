@@ -9,10 +9,15 @@ class OrderItemResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        // dd(
+        //     $this->unit_price ,
+        //     $this->total_price,
+        //     $this->discount
+        // );
         return [
             'id' => $this->id,
 
-            // معلومات المنتج
+            // product snapshot
             'product' => [
                 'id' => $this->product->id,
                 'name' => $this->product->name,
@@ -20,26 +25,22 @@ class OrderItemResource extends JsonResource
                 'image' => $this->product->main_image_url,
             ],
 
-            // الكمية
             'quantity' => $this->quantity,
 
-            // الأسعار
             'pricing' => [
                 'unit_price' => $this->unit_price / 100,
                 'total_price' => $this->total_price / 100,
-                'discount' => $this->discount,
+                'discount' => $this->discount ,
                 'discount_type' => $this->discount_type,
             ],
 
-            // الـ Attributes
-            'attributes' => $this->whenLoaded('attributes', function () {
-                return $this->attributes->map(function ($attr) {
-                    return [
-                        'name' => $attr->attribute_name,
-                        'value' => $attr->attribute_value,
-                        'additional_price' => $attr->additional_price / 100,
-                    ];
-                });
+            // attributes snapshot
+            'attributes' => $this->whenLoaded('itemAttributes', function () {
+                return $this->itemAttributes->map(fn ($attr) => [
+                    'name' => $attr->attribute_name,
+                    'value' => $attr->attribute_value,
+                    'additional_price' => $attr->additional_price,
+                ]);
             }),
         ];
     }

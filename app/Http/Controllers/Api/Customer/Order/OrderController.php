@@ -21,13 +21,13 @@ protected OrderService $orderService;
     {
         $this->orderService = $orderService;
     }
+
     public function store(CreateOrderRequest $request)
     {
         $data = $request->validated();
         $order = $this->orderService->createOrderFromCart($data);
-
         return $this->successResponse(
-            $order,
+            new OrderResource($order),
             'Order created successfully',
         );
     }
@@ -38,7 +38,7 @@ protected OrderService $orderService;
         ->with(['items.product','address'])
         ->paginate($per_page);
         return $this->successResponse(
-            $orders,
+            OrderResource::collection($orders),
             'Orders retrieved successfully',
         );
     }
