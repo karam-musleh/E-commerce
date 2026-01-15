@@ -64,6 +64,7 @@ class Order extends Model
     }
     // public $incrementing = true;
     // protected $keyType = 'int';
+
     public function user()
     {
         return $this->belongsTo(User::class);
@@ -76,6 +77,23 @@ class Order extends Model
     {
         return $this->hasMany(OrderItem::class);
     }
+    public function payments()
+    {
+        return $this->hasMany(Payment::class);
+    }
+
+    public function latestPayment()
+    {
+        return $this->hasOne(Payment::class)->latestOfMany();
+    }
+
+    public function successfulPayment()
+    {
+        return $this->hasOne(Payment::class)
+            ->where('status', 'paid')
+            ->latestOfMany();
+    }
+
     /**
      * تحقق إذا الطلب مدفوع
      */

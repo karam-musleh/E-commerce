@@ -30,17 +30,10 @@ return new class extends Migration
 
             $table->boolean('is_featured')->default(false);
             // $table->boolean('is_best_selling')->default(false); // add order table
-            // $table->boolean('is_flash_sale')->default(false);  // new table
-            // $table->boolean('is_exclusive')->default(false);
 
-            // $table->boolean('todays_deal')->default(false); //new table
 
             $table->string('unit')->nullable();
             $table->decimal('weight', 8, 2)->nullable();
-
-            // $table->float('rating_avg')->default(0);
-            // $table->integer('reviews_count')->default(0);
-
             $table->timestamps();
         });
     }
